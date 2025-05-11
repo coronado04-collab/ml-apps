@@ -81,11 +81,11 @@ Following this, we applied Word2Vec vectorization, also using Gensim. Due to the
 
 While the size of our dictionary is relatively large, which can support more expressive embeddings, the fact that Stack Overflow content often follows specific syntactic and technical patterns could still limit the diversity of semantic relationships. To visualize the learned embeddings, we used t-SNE to project the high-dimensional vectors into 2D space, enabling qualitative evaluation of semantic groupings.
 
-**GRAFICA**  
+![Model architecture](images/svc.png)
 
 This allowed us to apply Latent Dirichlet Allocation (LDA), which is a key focus of this project. LDA allows us to study tags within the dataset and assess the quality of our document vectorization by evaluating how well the extracted topics align with meaningful thematic structures.  
 
-**GRAFICA**
+![Model architecture](images/lda.png)
 
 ---
 
@@ -93,7 +93,53 @@ This allowed us to apply Latent Dirichlet Allocation (LDA), which is a key focus
 
 ### 2.1 Classification
 
-*(Section intentionally left blank in source)*
+We implemented two baseline classifiers: Logistic Regression and Support Vector Classifier (SVC), using one model per label and One vAll strategies respectively. However, both approaches demonstrated poor performance in the multi-class context of our dataset.
+
+The main problem arises from the class imbalance and high label cardinality. With thousands of possible tags—many of which appear only few of times—it becomes very unlikely for a model to correctly predict rare labels. This issue is especially important in the SVC setup, where one classifier is trained per tag. If a tag has very few positive examples, the classifier struggles to generalize and often defaults to predicting the negative class.
+
+The Logistic Regression model suffers from a different but related problem. It consistently results in high accuracy scores (i.e., ~0.99). This is also caused by the imbalance: since the vast majority of labels are "absent" (i.e., 0), the model learns to predict the negative class for almost all samples. While this results in high overall accuracy, it fails to capture the actual signal, especially for rare tags.
+
+To address this issue, we applied a frequency thresholding strategy. Specifically, we filtered out rare tags by keeping only those that appeared at least 350 times in the dataset.
+
+By removing underrepresented tags, we improved the model’s ability to learn meaningful patterns and generalize better, since there were now enough examples per tag to support effective training.
+
+#### Validation Methodologies
+
+Regarding the validation methodologies for adjusting hyperparameters, we applied train test splitting and cross validation with grid search.
+
+#### Train Test Split
+
+First, we divided the preprocessed dataset into a training and test set, to prevent information leakage and allow to estimate how well the model generalizes to unseen data.
+
+#### Grid Search with Cross Validation
+
+In order to prevent overfitting during tuning and find the best-performing model configuration. In our case we used:
+
+- 5 folds for Logistic Regression  
+- 3 folds for Support Vector Classification (high computational cost)
+
+### Vectorization Techniques
+
+Once solved, we trained and compared classifiers — Support Vector Classifier (SVC) and Logistic Regression — using different text vectorization techniques: Bag of Words (BoW), GloVe, and TF-IDF. This will allow us to see and understand how different vectorization techniques affect model performance, and which one suits best – pure word frequency, semantic relationships between words based on global corpus statistics, or relative importance of a word in a document compared to the whole corpus.
+
+We will discard the GloVe vectorization beforehand, since the results where bad, this could be because it is based on global corpus statistics, and too niche areas aren’t well captured.
+
+Both classifiers were wrapped in a multi-label setting, using either OneVsRestClassifier (for SVC) or fitting one binary classifier per label (for Logistic Regression).
+
+To evaluate the performance of our models, we used several metrics: accuracy, ROC curves, confusion matrices, as well as micro-averaged and macro-averaged precision, recall, and F1-scores. These metrics allowed us to assess both overall model performance and how well individual tags were predicted, especially considering class imbalance.
+
+## Results
+
+| Vectorizer | Classifier         | Accuracy | F1-score (macro) | Precision | Recall |
+|------------|--------------------|----------|------------------|-----------|--------|
+| BoW        | SVC                | 38.03%   | 0.31             | 0.47      | 0.24   |
+| TF-IDF     | SVC                | 43.62%   | 0.37             | 0.61      | 0.28   |
+| BoW        | Logistic Regression| 95.94%   | 0.25             | 0.45      | 0.21   |
+| TF-IDF     | Logistic Regression| 96.42%   | 0.29             | 0.57      | 0.21   |
+
+The results favour TF-IDF representation, this could be because it reduces the weight of common, less informative words, helping the model focus on domain-specific terms which is sufficient to perform the classification.
+![Model architecture](images/svc.png)
+![Model architecture](images/logistic.png)
 
 ### 2.2 Clustering
 
@@ -142,6 +188,15 @@ However, since we only used 2 clusters, the resulting groups are quite broad, an
 
 **CLUSTER VISUALIZATION USING PCA PROJECTION**  
 This visualization compares the clusters generated by the three different methods after dimensionality reduction using PCA. Each plot highlights the distinct grouping patterns in the data.
+![Model architecture](images/clustering.png)
+
+Here we can take different insights on the effects of text representation using clustering:
+
+With TF-IDF there is an internal variation between clustering (heteregeneous), which could be expected as TF-IDF lacks semantic understanding. The fact that we can still differentiate between clusters implies that there are still keyword usage patterns (e.g., Java questions having terms like JVM, Spring).
+
+We know that LDA is a topic model that assumes documents are mixtures of topics. In this case the representation, together with LDA, could suggest that the “base” is made of well differentiated documents (e.g., only Java  or C++), and the “homogeneous” cluster contains more generic programming questions that span multiple domains.
+
+Lastly, word2vec gives semantic embeddings, suggesting the presence of a strong latent semantic dichotomy.
 
 ---
 
