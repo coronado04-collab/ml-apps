@@ -81,7 +81,7 @@ Following this, we applied Word2Vec vectorization, also using Gensim. Due to the
 
 While the size of our dictionary is relatively large, which can support more expressive embeddings, the fact that Stack Overflow content often follows specific syntactic and technical patterns could still limit the diversity of semantic relationships. To visualize the learned embeddings, we used t-SNE to project the high-dimensional vectors into 2D space, enabling qualitative evaluation of semantic groupings.
 
-![Model architecture](images/svc.png)
+![Model architecture](images/tsne.png)
 
 This allowed us to apply Latent Dirichlet Allocation (LDA), which is a key focus of this project. LDA allows us to study tags within the dataset and assess the quality of our document vectorization by evaluating how well the extracted topics align with meaningful thematic structures.  
 
